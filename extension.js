@@ -66,7 +66,7 @@ function disable(){
     }
 }
 
-// Requests API Dollar
+// Requests energy pricing
 function load_json_async(){
     if (_httpSession === undefined) {
         _httpSession = new Soup.Session();
