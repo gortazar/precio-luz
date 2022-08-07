@@ -1,0 +1,11 @@
+StLabel.cheap-style {
+    color: green;
+}
+
+StLabel.standard-style {
+    color: red;
+}
+
+StLabel.under-avg-style {
+    color: yellow;
+}
