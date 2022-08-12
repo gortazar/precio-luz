@@ -18,7 +18,7 @@
 
 'use strict';
 
-const {St, Gio, Clutter, Soup, GLib} = imports.gi;
+const {St, Gio, GObject, Clutter, Soup, GLib} = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -43,15 +43,15 @@ let energyPricingManager
 function enable() {
     log(`enabling ${Me.metadata.name}`);
 
-    energyPricingManager = new energyPricingManager();
+    energyPricingManager = new EnergyPricingManager();
     
-    Main.panel._rightBox.insert_child_at_index(energyPricingManager, 0);
+    Main.panel.addToStatusArea(Me.metadata.name, energyPricingManager, 1);
 }
 
 // Remove the added button from panel
 function disable(){
     log(`disabling ${Me.metadata.name}`);
-    Main.panel._rightBox.remove_child(energyPricingManager);
+    Main.panel.removeFromStatusArea(energyPricingManager);
     
     if (energyPricingManager) {
         energyPricingManager.destroy();
@@ -73,11 +73,11 @@ const EnergyPricingManager = GObject.registerClass({
         panelButton = new St.Bin({
             style_class : "panel-button",
         });
-        this.addChild(panelButton)
-        load_json_async();
+        this.add_child(panelButton)
+        this.load_json_async();
         
         sourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3600, () => {
-            load_json_async();
+            this.load_json_async();
             return GLib.SOURCE_CONTINUE;
         });
     }
@@ -123,6 +123,9 @@ const EnergyPricingManager = GObject.registerClass({
                 return;
 
             } catch (e) {
+
+                logError(e);
+
                 panelButtonText = new St.Label({
                     text : "Luz error",
                     y_align: Clutter.ActorAlign.CENTER,
@@ -152,20 +155,26 @@ const EnergyPricingManager = GObject.registerClass({
                     return;
                 }
 
-
-                    // clean menu
+                print('ok');
+                // clean menu
                 this.menu._getMenuItems().forEach(function (i) { i.destroy() })
+                print('ok');
+                log(messageAll.response_body.data);
+                let jp = JSON.parse(messageAll.response_body.data);
+                let map = new Map(Object.entries(jp));
+                map.forEach((key, value) => {
+                    this.addMenuLabel(key, value);
+                });
 
-                let jp = JSON.parse(message.response_body.data);
-                jp.forEach(addMenuLabel);
-
-                panelButton.set_child(panelButtonText);
                 _httpSession.abort();
                 return;
 
             } catch (e) {
+
+                logError(e);
+
                 panelButtonText = new St.Label({
-                    text : "Luz error",
+                    text : "Error",
                     y_align: Clutter.ActorAlign.CENTER,
                 });
 
@@ -187,7 +196,7 @@ const EnergyPricingManager = GObject.registerClass({
         return _style;
     }
 
-    addMenuLabel(value, key, map) {
+    addMenuLabel(value, key) {
         console.log(`data[${key}] = ${value}`);
 
         const menuLabel = new PopupMenu.PopupMenuItem(
@@ -199,14 +208,14 @@ const EnergyPricingManager = GObject.registerClass({
 
         let _style = this.getStyle(value);
         const itemLabelText = new St.Label({
-            text : "💡" + key + " -> " + price.toFixed(3) + " €/kWh",
+            text : "💡" + price.toFixed(3) + " €/kWh",
             y_align: Clutter.ActorAlign.CENTER,
             style_class: _style
         });
 
-        menuLabel.addChild(itemLabelText);
+        menuLabel.add_child(itemLabelText);
 
-        this.menu.addChild(menuLabel);
+        this.menu.addMenuItem(menuLabel);
     }
 
 })
