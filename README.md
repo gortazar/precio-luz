@@ -2,6 +2,8 @@
 ```
 Extension to Gnome-Shell v.(36,38,40,41,42), for energy price information (Spain).
 
+![Popup menu with price per hour](energy-pricing-gnome-shell-extension.gif)
+
 # Licence
 ```
 This program is free software: you can redistribute it and/or modify
