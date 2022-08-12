@@ -1,5 +1,5 @@
 # Precio-luz
-```
+
 Extension to Gnome-Shell v.(36,38,40,41,42), for energy price information (Spain).
 
 ![Popup menu with price per hour](https://github.com/gortazar/precio-luz/blob/price-by-hour-in-menu-item/energy-pricing-gnome-shell-extension.gif)
