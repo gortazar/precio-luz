@@ -2,7 +2,7 @@
   "uuid": "precio-luz@gortazar.github.com",
   "name": "Precio luz",
   "description": "El precio de la luz en España. Se actualiza cada hora y se basa en información de Precio de la luz, https://api.preciodelaluz.org/. (based on shoaibzs' Dollar-PKR https://github.com/shoaibzs/dollar-pkr)",
-  "version": 0.1,
+  "version": 0.2,
   "shell-version": ["3.38", "40", "41", "42"],
   "url": "https://github.com/gortazar/precio-luz"
 }

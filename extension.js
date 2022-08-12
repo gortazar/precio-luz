@@ -24,11 +24,11 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
+const PopupMenu = imports.ui.popupMenu;
 
 let panelButton;
 let panelButtonText;
 let _httpSession;
-let _dollarQuotation;
 let sourceId = null;
 
 // Start application
@@ -36,29 +36,26 @@ function init(){
     log(`initializing ${Me.metadata.name}`);
 }
 
+
+let energyPricingManager
+
 // Add the button to the panel
 function enable() {
     log(`enabling ${Me.metadata.name}`);
-    panelButton = new St.Bin({
-        style_class : "panel-button",
-    });
 
-    load_json_async();
-    Main.panel._rightBox.insert_child_at_index(panelButton, 0);
-    sourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 60, () => {
-        load_json_async();
-        return GLib.SOURCE_CONTINUE;
-    });
+    energyPricingManager = new energyPricingManager();
+    
+    Main.panel._rightBox.insert_child_at_index(energyPricingManager, 0);
 }
 
 // Remove the added button from panel
 function disable(){
     log(`disabling ${Me.metadata.name}`);
-    Main.panel._rightBox.remove_child(panelButton);
+    Main.panel._rightBox.remove_child(energyPricingManager);
     
-    if (panelButton) {
-        panelButton.destroy();
-        panelButton = null;
+    if (energyPricingManager) {
+        energyPricingManager.destroy();
+        energyPricingManager = null;
     }   
     if (sourceId) {
         GLib.Source.remove(sourceId);
@@ -66,61 +63,151 @@ function disable(){
     }
 }
 
-// Requests energy pricing
-function load_json_async(){
-    if (_httpSession === undefined) {
-        _httpSession = new Soup.Session();
-    } else {
-        _httpSession.abort();
+const EnergyPricingManager = GObject.registerClass({
+    GTypeName: 'EnergyPricingManager'
+}, class EnergyPricingManager extends PanelMenu.Button {
+    _init () {
+        super._init(0)
+        log('epm._init')
+
+        panelButton = new St.Bin({
+            style_class : "panel-button",
+        });
+        this.addChild(panelButton)
+        load_json_async();
+        
+        sourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3600, () => {
+            load_json_async();
+            return GLib.SOURCE_CONTINUE;
+        });
     }
 
-    let message = Soup.form_request_new_from_hash(
-        'GET', 
-        "https://api.preciodelaluz.org/v1/prices/now", 
-        {"zone":"PCB"});
+    // Requests energy pricing
+    load_json_async(){
+        if (_httpSession === undefined) {
+            _httpSession = new Soup.Session();
+        } else {
+            _httpSession.abort();
+        }
+
+        let message = Soup.form_request_new_from_hash(
+            'GET', 
+            "https://api.preciodelaluz.org/v1/prices/now", 
+            {"zone":"PCB"});
+        
+        _httpSession.queue_message(message, () => {
+            try {
+                if (!message.response_body.data) {
+                    panelButtonText = new St.Label({
+                        text : "💡 ? €/kWh)",
+                        y_align: Clutter.ActorAlign.CENTER,
+                    });
+                    panelButton.set_child(panelButtonText);
+                    _httpSession.abort();
+                    return;
+                }
+
+                let jp = JSON.parse(message.response_body.data);
+                let price = jp["price"];
+                price = price / 1000.0; // Convert from MWh to kWh
     
-    _httpSession.queue_message(message, () => {
-        try {
-            if (!message.response_body.data) {
+                let _style = this.getStyle(jp);
                 panelButtonText = new St.Label({
-                    text : "💡 ? €/kWh)",
+                    text : "💡" + price.toFixed(3) + " €/kWh",
+                    y_align: Clutter.ActorAlign.CENTER,
+                    style_class: _style
+                });
+
+                panelButton.set_child(panelButtonText);
+                _httpSession.abort();
+                return;
+
+            } catch (e) {
+                panelButtonText = new St.Label({
+                    text : "Luz error",
                     y_align: Clutter.ActorAlign.CENTER,
                 });
+
                 panelButton.set_child(panelButtonText);
                 _httpSession.abort();
                 return;
             }
+        });
 
-            let jp = JSON.parse(message.response_body.data);
-            let price = jp["price"];
-            price = price / 1000.0; // Convert from MWh to kWh
-   
-            let _style = "standard-style";
-            if(jp["is-cheap"]) {
+        let messageAll = Soup.form_request_new_from_hash(
+            'GET', 
+            "https://api.preciodelaluz.org/v1/prices/all", 
+            {"zone":"PCB"});
 
-                _style = "cheap-style"
-            } else if(jp["is-under-avg"]) {
-                    _style = "under-avg-style"
+        _httpSession.queue_message(messageAll, () => {
+            try {
+                if (!message.response_body.data) {
+
+                    panelButtonText = new St.Label({
+                        text : "💡 ? €/kWh)",
+                        y_align: Clutter.ActorAlign.CENTER,
+                    });
+                    panelButton.set_child(panelButtonText);
+                    _httpSession.abort();
+                    return;
+                }
+
+
+                    // clean menu
+                this.menu._getMenuItems().forEach(function (i) { i.destroy() })
+
+                let jp = JSON.parse(message.response_body.data);
+                jp.forEach(addMenuLabel);
+
+                panelButton.set_child(panelButtonText);
+                _httpSession.abort();
+                return;
+
+            } catch (e) {
+                panelButtonText = new St.Label({
+                    text : "Luz error",
+                    y_align: Clutter.ActorAlign.CENTER,
+                });
+
+                panelButton.set_child(panelButtonText);
+                _httpSession.abort();
+                return;
             }
-            panelButtonText = new St.Label({
-                text : "💡" + price.toFixed(3) + " €/kWh",
-                y_align: Clutter.ActorAlign.CENTER,
-                style_class: _style
-            });
+        });
+    }
 
-            panelButton.set_child(panelButtonText);
-            _httpSession.abort();
-            return;
+    getStyle(jp) {
+        let _style = "standard-style";
+        if (jp["is-cheap"]) {
 
-        } catch (e) {
-            panelButtonText = new St.Label({
-                text : "Luz error",
-                y_align: Clutter.ActorAlign.CENTER,
-            });
-
-            panelButton.set_child(panelButtonText);
-            _httpSession.abort();
-            return;
+            _style = "cheap-style";
+        } else if (jp["is-under-avg"]) {
+            _style = "under-avg-style";
         }
-    });
-}
+        return _style;
+    }
+
+    addMenuLabel(value, key, map) {
+        console.log(`data[${key}] = ${value}`);
+
+        const menuLabel = new PopupMenu.PopupMenuItem(
+            key,
+            {reactive: false});
+
+        let price = value["price"];
+        price = price / 1000.0;
+
+        let _style = this.getStyle(value);
+        const itemLabelText = new St.Label({
+            text : "💡" + key + " -> " + price.toFixed(3) + " €/kWh",
+            y_align: Clutter.ActorAlign.CENTER,
+            style_class: _style
+        });
+
+        menuLabel.addChild(itemLabelText);
+
+        this.menu.addChild(menuLabel);
+    }
+
+})
+
