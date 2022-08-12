@@ -1,6 +1,8 @@
 # Precio-luz
-```
+
 Extension to Gnome-Shell v.(36,38,40,41,42), for energy price information (Spain).
+
+![Popup menu with price per hour](https://github.com/gortazar/precio-luz/blob/price-by-hour-in-menu-item/energy-pricing-gnome-shell-extension.gif)
 
 # Licence
 ```
@@ -24,3 +26,13 @@ Or just download precio-luz@gortazar.github.com.zip form releases and unzip prec
 To restart GNOME Shell in X11, pressing Alt+F2 to open the Run Dialog and enter restart 
 (or just r). 
 In Wayland Log out and Login agaian.
+
+# How to debug
+
+Debug info is shown in journalctl:
+
+```
+journalctl -f -o cat /usr/bin/gnome-shell
+```
+
+Alternatively, error logs can also be debugged with looking glass: press Alt+F2, and then type lg
