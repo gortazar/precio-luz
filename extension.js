@@ -159,11 +159,8 @@ const EnergyPricingManager = GObject.registerClass({
                     return;
                 }
 
-                print('ok');
                 // clean menu
                 this.menu._getMenuItems().forEach(function (i) { i.destroy() })
-                print('ok');
-                log(messageAll.response_body.data);
                 let jp = JSON.parse(messageAll.response_body.data);
                 let map = new Map(Object.entries(jp));
                 map.forEach((key, value) => {
