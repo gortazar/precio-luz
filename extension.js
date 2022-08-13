@@ -51,16 +51,11 @@ function enable() {
 // Remove the added button from panel
 function disable(){
     log(`disabling ${Me.metadata.name}`);
-    Main.panel.removeFromStatusArea(energyPricingManager);
     
     if (energyPricingManager) {
         energyPricingManager.destroy();
         energyPricingManager = null;
     }   
-    if (sourceId) {
-        GLib.Source.remove(sourceId);
-        sourceId = null;
-    }
 }
 
 const EnergyPricingManager = GObject.registerClass({
@@ -80,6 +75,15 @@ const EnergyPricingManager = GObject.registerClass({
             this.load_json_async();
             return GLib.SOURCE_CONTINUE;
         });
+    }
+
+    destroy() {
+        super.destroy();
+
+        if (sourceId) {
+            GLib.Source.remove(sourceId);
+            sourceId = null;
+        }            
     }
 
     // Requests energy pricing
